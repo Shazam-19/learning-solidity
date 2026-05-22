@@ -43,4 +43,33 @@ contract TestSafeMath {
     }
 }
 
+// This will allow us to remove any element from any array wihout any gaps
+library Array {
+    function remove(uint[] storage arr, uint256 index) public {
+        arr[index] = arr[arr.length - 1];
+        arr.pop();
+    }
+}
 
+contract TestArray {
+    using Array for uint[];
+
+    uint[] public arr;
+
+    function testArrayRemove() public {
+        for (uint256 i = 0; i < 3; i++) {
+            arr.push(i);
+        }
+
+        // [0, 1, 2]
+
+        arr.remove(1);
+
+        // arr[index] = arr[arr.length - 1]; ==> [0, 2, 2]
+        // arr.pop(); ==> [0, 2]
+
+        assert(arr.length == 2);
+        assert(arr[0] == 0);
+        assert(arr[1] == 2);
+    }
+}
