@@ -47,6 +47,38 @@ library SafeMath {
         require(z >= x, "uint overflow");
         return z;
     }
+
+
+    // Computes the integer square root of y using the Babylonian method.
+    // Returns the largest integer z such that z * z <= y.
+    //
+    // The Babylonian method works by starting with an initial guess and
+    // repeatedly refining it until it converges on the answer.
+    //
+    // Examples:
+    //   sqrt(9)  → 3  (exact)
+    //   sqrt(8)  → 2  (rounds down, since 2*2=4 <= 8 < 9=3*3)
+    //   sqrt(0)  → 0
+    //   sqrt(1)  → 1
+    function sqrt(uint256 y) internal pure returns (uint256 z) {
+        if (y > 3) {
+            z = y;              // Initial guess: start with y itself
+            uint256 x = y / 2 + 1; // Better initial guess: roughly y/2
+
+            // Refine the guess until it stops improving.
+            // Each iteration brings x closer to the true square root.
+            // When x >= z, the algorithm has converged.
+            while (x < z) {
+                z = x;              // Update best result so far
+                x = (y / x + x) / 2; // Babylonian formula: average of x and y/x
+            }
+        } else if (y != 0) {
+            // For y = 1, 2, or 3, the square root is always 1
+            // (avoids infinite loop since the Babylonian method needs y > 3)
+            z = 1;
+        }
+        // For y = 0: z remains 0 (the default value for uint256)
+    }
 }
 
 // -----------------------------------------------------------------------------
@@ -68,6 +100,13 @@ contract TestSafeMath {
         return x.add(y);
         // Alternative syntax (without 'using...for'):
         // return SafeMath.add(x, y);
+    }
+
+    // Calls the sqrt function from the Math library and returns the result.
+    // Used to test that the square root implementation behaves correctly.
+    // Example: testSquareRoot(16) → 4, testSquareRoot(10) → 3
+    function testSquareRoot(uint256 x) public pure returns (uint256) {
+        return SafeMath.sqrt(x);
     }
 }
 
