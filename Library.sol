@@ -50,6 +50,7 @@ library SafeMath {
 
 
     // Computes the integer square root of y using the Babylonian method.
+    // Watch this video to understand more about how the Babylonian method works https://www.youtube.com/watch?v=MXveVqBxFow
     // Returns the largest integer z such that z * z <= y.
     //
     // The Babylonian method works by starting with an initial guess and
