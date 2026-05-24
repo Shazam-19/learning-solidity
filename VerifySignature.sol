@@ -1,88 +1,3 @@
-/*
-
-pragma solidity ^0.8.26;
-
-/*
-Signature Verification
-
-# How to Sign and Verify Messages:
-
-## Signing a message
-1. Create a message to sign
-2. Hash the message
-3. Sign the hash (off chain, keep your private key secret)
-
-# Verify
-1. Recreate hash from original message
-2. Recover signer from signature and hash
-3. Compare recovered signer to claimed signer
-
-
-contract VerifySignature {
-    // Signing: Step 1 & 2
-    function getMessageHash(
-        address _to,
-        uint256 _amount,
-        string memory _message,
-        uint256 _nonce
-    ) public pure returns (bytes32) {
-        return keccak256(abi.encodePacked(_to, _amount, _message, _nonce));
-    }
-
-    // Signature is produced by signing a keccak256 hash with the following format
-    // "\x19Ethereum Signed Message\n" + len(msg) + msg
-    // \x19Ethereum Signed Message\n32...message hash goes here...
-    function getEthSignedMessageHash(
-        bytes32 _messageHash
-    ) public pure returns (bytes32) {
-        return
-            keccak256(
-                abi.encodePacked(
-                    "\x19Ethereum Signed Message:\n32",
-                    _messageHash
-                )
-            );
-    }
-
-    // Big picture function
-    function verify(
-        address _signer,
-        address _to,
-        uint256 _amount,
-        string memory _message,
-        uint256 _nonce,
-        bytes memory signature
-    ) public pure returns (bool) {
-        bytes32 messageHash = getMessageHash(_to, _amount, _message, _nonce);
-        bytes32 ethSignedMessageHash = getEthSignedMessageHash(messageHash);
-
-        return recoverSigner(ethSignedMessageHash, signature) == _signer;
-    }
-
-    function recoverSigner(
-        bytes32 _ethSignedMessageHash,
-        bytes memory _signature
-    ) public pure returns (address) {
-        (bytes32 r, bytes32 s, uint8 v) = splitSignature(_signature);
-
-        return ecrecover(_ethSignedMessageHash, v, r, s);
-    }
-
-    function splitSignature(bytes memory _sig) public pure returns ( bytes32 r, bytes32 s, uint8 v) {
-        require(_sig.length == 65, "Invalid Signature Length");
-
-        assembly {
-            r := mload(add(_sig, 32))
-            // add(x, y) --> x + y
-            // add(_sig, 32) --> skips first 32 bytes since we store the lenghth of a dynamic array in the first 32 bytes 
-            // mload(p) loads next 32 bytes starting at the memory address p
-            s := mload(add(_sig, 64))
-            v := byte(0, mload(add(_sig, 96)))
-        }
-    }
-}
-*/
-
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
@@ -108,7 +23,6 @@ pragma solidity ^0.8.26;
  *    3. Compare the recovered address to the claimed signer address.
  *       If they match → the signature is authentic.
  *
- * ─────────────────────────────────────────────────────────────
  */
 
 contract VerifySignature {
@@ -118,13 +32,14 @@ contract VerifySignature {
      * Run this in your browser console before signing:
      *
      *   const accounts = await ethereum.request({ method: 'eth_requestAccounts' });
-     *   
-     *   Make sure that you are connecting by runnding the command
-     *   window.ethereum
-     *   If an object appear, then all is good but if "undefined" is shown then the MetaMask account isn't connected
-     * 
+     *
      * This prompts the user to connect their MetaMask wallet and returns
      * an array of available account addresses.
+     *
+     * To confirm MetaMask is connected, run:
+     *   window.ethereum
+     * If an object is returned → MetaMask is connected ✅
+     * If "undefined" is returned → MetaMask is not connected ❌
      */
 
     /*
@@ -132,13 +47,17 @@ contract VerifySignature {
      *
      * Call getMessageHash() with your parameters to produce the hash.
      * Example inputs:
-     *   _to      = 0xAb8483F64d9C6d1EcF9b849Ae677dD3315835cb2 (Remix Test Account 2 Address)
+     *   _to      = 0xAb8483F64d9C6d1EcF9b849Ae677dD3315835cb2  (Account 2 in Remix)
      *   _amount  = 123
      *   _message = "coffee and donuts"
      *   _nonce   = 1
      *
      * Expected output:
      *   hash = "0x56f00a5093efc595178316938b3e9ab51b37610ca57b1b471aa4ce801f05251d"
+     *
+     * Then store the hash in your browser console for use in Step 3:
+     *
+     *   const hash = "0x56f00a5093efc595178316938b3e9ab51b37610ca57b1b471aa4ce801f05251d"
      */
 
     /**
@@ -168,12 +87,10 @@ contract VerifySignature {
      * Use personal_sign to sign the hash with your MetaMask account.
      * Note: the params order is [hash, account] for personal_sign.
      *
-     *   const accounts = await ethereum.request({ method: 'eth_requestAccounts' });
-     *
      *   const signature = await ethereum.request({
      *     method: 'personal_sign',
      *     params: [
-     *       "0x56f00a5093efc595178316938b3e9ab51b37610ca57b1b471aa4ce801f05251d",
+     *       "hash",
      *       accounts[0]
      *     ]
      *   });
@@ -218,7 +135,6 @@ contract VerifySignature {
      *
      * To recover the signer's address off-chain before calling verify():
      *
-     *   const hash = "0x56f00a5093efc595178316938b3e9ab51b37610ca57b1b471aa4ce801f05251d";
      *   const signature = "0x1064e4bf90f87bbac70e8e23f034a409c348709159b74662a0d5c35512897e93
      *                       3bd18f15757c689882f12ee447fb8e59070bebeb60d009647ce29994cb2ec92c1c";
      *
@@ -246,6 +162,10 @@ contract VerifySignature {
      *         the signer's address from the signature, and compares it to `_signer`.
      *         Returns true only if the addresses match exactly.
      *
+     *         Guards against the address(0) vulnerability — ecrecover() silently
+     *         returns address(0) for malformed signatures. Without this check,
+     *         passing _signer = address(0) with a bad signature would return true.
+     *
      * @param _signer    The address claiming to have signed the message.
      * @param _to        The recipient address used when creating the message.
      * @param _amount    The amount used when creating the message.
@@ -268,9 +188,14 @@ contract VerifySignature {
         // Step 2: Apply the Ethereum signed message prefix to match what was signed.
         bytes32 ethSignedMessageHash = getEthSignedMessageHash(messageHash);
 
-        // Step 3: Recover the signer and compare to the claimed address.
+        // Step 3: Recover the signer's address from the signature.
         address recovered = recoverSigner(ethSignedMessageHash, signature);
+
+        // Step 4: Guard against invalid signatures; ecrecover() returns address(0)
+        // for malformed input. Passing address(0) as _signer must never return true.
         require(recovered != address(0), "Invalid signature");
+
+        // Step 5: Compare the recovered address to the claimed signer.
         return recovered == _signer;
     }
 
@@ -280,7 +205,8 @@ contract VerifySignature {
      *         ecrecover takes the signed hash and the three signature components
      *         (v, r, s) and mathematically derives the signer's public key,
      *         then returns the corresponding Ethereum address.
-     *         Returns address(0) if the signature is invalid.
+     *         Returns address(0) if the signature is invalid — always check
+     *         the return value before using it (handled in verify()).
      *
      * @param _ethSignedMessageHash  The prefixed hash (output of getEthSignedMessageHash).
      * @param _signature             The raw 65-byte signature to recover from.
@@ -303,9 +229,9 @@ contract VerifySignature {
      *           [32..63] → s (32 bytes): proof component of the signature.
      *           [64]     → v (1 byte):  recovery identifier, either 27 or 28.
      *
-     *         This function uses inline assembly (low-level EVM code) to read
-     *         directly from memory, since Solidity has no native way to slice
-     *         a bytes value into fixed-size chunks.
+     *         Uses inline assembly (low-level EVM code) to read directly from
+     *         memory, since Solidity has no native way to slice a bytes value
+     *         into fixed-size chunks.
      *
      *         mload(p) reads 32 bytes starting at memory address p.
      *         The first 32 bytes of a `bytes memory` variable store its length,
@@ -314,13 +240,13 @@ contract VerifySignature {
      * @param sig  The raw 65-byte signature.
      * @return r   First 32 bytes of the signature.
      * @return s   Second 32 bytes of the signature.
-     * @return v   Final byte — the recovery identifier.
+     * @return v   Final byte; the recovery identifier (27 or 28).
      */
     function splitSignature(
         bytes memory sig
     ) public pure returns (bytes32 r, bytes32 s, uint8 v) {
         // A valid Ethereum signature is always exactly 65 bytes.
-        require(sig.length == 65, "invalid signature length");
+        require(sig.length == 65, "Invalid signature length");
 
         assembly {
             // Skip the first 32 bytes (the `bytes` length prefix stored by Solidity).
@@ -334,19 +260,73 @@ contract VerifySignature {
 
         // Normalise v to 27 or 28.
         // Some signers (web3.py, ethers.js, hardware wallets) return v as 0 or 1.
-        // ecrecover() requires 27 or 28 and returns address(0) for anything else.
+        // ecrecover() requires 27 or 28 and silently returns address(0) otherwise.
         if (v < 27) v += 27;
 
         // Reject signatures where s is in the upper half of the curve order.
-        // Every signature has a mirrored form with a different s value that is
-        // also mathematically valid. Restricting s to the lower half ensures
-        // each message can only have one valid signature, preventing an attacker
-        // from replaying a mirrored version of a legitimate signature.
+        // Every ECDSA signature has a mirrored form with a different s value that
+        // ecrecover() also accepts. Restricting s to the lower half ensures each
+        // message can only have one valid signature, preventing an attacker from
+        // crafting a second valid signature from a legitimate one.
         require(
-            uint256(s) <= 0x7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF5D576E7357A4501DDFE92F46681B20A0,
+            uint256(s) <=
+                0x7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF5D576E7357A4501DDFE92F46681B20A0,
             "Invalid signature: s value out of range"
         );
 
         // r, s, v are returned implicitly via named return variables.
     }
 }
+
+/*
+ * ─────────────────────────────────────────────────────────────
+ *  Testing in Remix — Important Notes
+ * ─────────────────────────────────────────────────────────────
+ *
+ *  ⚠️  Remix Hashing Discrepancy:
+ *  Remix hashes the message hash a second time before producing the
+ *  ETH signed message hash, whereas this contract uses the message
+ *  hash directly. This means their outputs will NOT match:
+ *
+ *  Given the same input parameters:
+ *    Message hash     : 0x56f00a5093efc595178316938b3e9ab51b37610ca57b1b471aa4ce801f05251d
+ *    Remix output     : 0xd3445702e9995d1b351adf2606d88910d12dd95554f0bbdaa8d02061933c6363
+ *    Contract output  : 0xed08430382ce60ae9e2b032b99a36b2c5c5c5a3fa1d293926ce87c723f2fce84
+ *
+ *  For accurate testing, use ethers.js or web3.js instead of Remix's
+ *  built-in signing tool. See the off-chain signing examples in the
+ *  step-by-step comments below.
+ *
+ * ─────────────────────────────────────────────────────────────
+ *  Step-by-Step Remix Test (aware of the discrepancy above)
+ * ─────────────────────────────────────────────────────────────
+ *
+ *  STEP 1 — Get the message hash:
+ *    Call getMessageHash() with these example parameters:
+ *      _to      : 0xAb8483F64d9C6d1EcF9b849Ae677dD3315835cb2  (Account 2 in Remix)
+ *      _amount  : 123
+ *      _message : "coffee and donuts"
+ *      _nonce   : 1
+ *    Copy the returned messageHash value.
+ *
+ *  STEP 2 — Sign the message hash in Remix:
+ *    - In the "Deploy & Run Transactions" tab, select Account 1.
+ *    - Click the pen icon (✏️) next to the account selector to open
+ *      the signing popup.
+ *    - Paste the messageHash from Step 1 and click "Sign".
+ *    - Remix returns two values:
+ *        ethSignedMessageHash → the prefixed hash (note: differs from contract output)
+ *        signature            → copy this for Step 3.
+ *
+ *  STEP 3 — Verify the signature:
+ *    Call verify() with:
+ *      _signer    : 0x5B38Da6a701c568545dCfcB03FcB875f56beddC4  (Account 1 in Remix)
+ *      _to        : 0xAb8483F64d9C6d1EcF9b849Ae677dD3315835cb2
+ *      _amount    : 123
+ *      _message   : "coffee and donuts"
+ *      _nonce     : 1
+ *      signature  : [paste signature from Step 2]
+ *
+ *    Should return: true ✅
+ * ─────────────────────────────────────────────────────────────
+ */
