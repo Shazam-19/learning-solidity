@@ -25,6 +25,51 @@ pragma solidity ^0.8.26;
  *
  */
 
+/*
+ * ═══════════════════════════════════════════════════════════════════
+ *  CONTRACT MIND MAP
+ * ═══════════════════════════════════════════════════════════════════
+ *
+ *                      ┌─────────────────────┐
+ *                      │  VerifySignature    │
+ *                      └──────────┬──────────┘
+ *                    ┌────────────┴────────────┐
+ *                    │                         │
+ *                    ▼                         ▼
+ *        ┌───────────────────┐     ┌───────────────────┐
+ *        │   SIGNING PHASE   │     │  VERIFYING PHASE  │
+ *        │   (off-chain)     │     │   (on-chain)      │
+ *        └────────┬──────────┘     └─────────┬─────────┘
+ *                 │                          │
+ *                 ▼                          ▼
+ *        ┌─────────────────┐       ┌─────────────────┐
+ *        │getMessageHash() │       │    verify()     │
+ *        │keccak256 of     │       │ entry point,    │
+ *        │packed params    │       │ returns bool    │
+ *        └────────┬────────┘       └────────┬────────┘
+ *                 │                         │
+ *                 ▼                         ▼
+ *        ┌─────────────────┐       ┌─────────────────┐
+ *        │getEthSigned     │       │ recoverSigner() │
+ *        │MessageHash()    │       │ calls           │
+ *        │prepends \x19    │       │ ecrecover()     │
+ *        │prefix           │       └────────┬────────┘
+ *        └────────┬────────┘                │
+ *                 │                         ▼
+ *                 ▼                ┌─────────────────┐
+ *        ┌─────────────────┐       │splitSignature() │
+ *        │personal_sign()  │       │extracts r, s, v │
+ *        │MetaMask signs   │       │via assembly     │
+ *        │off-chain        │       └─────────────────┘
+ *        └─────────────────┘
+ *
+ *  INTERNAL CALL CHAIN:
+ *  verify() ──► recoverSigner() ──► splitSignature() ──► ecrecover()
+ *
+ * ═══════════════════════════════════════════════════════════════════
+ */
+
+
 contract VerifySignature {
     /*
      * ── STEP 1: Unlock MetaMask and request account access ──────────────
@@ -84,7 +129,7 @@ contract VerifySignature {
     /*
      * ── STEP 3: Sign the message hash off-chain ──────────────────────────
      *
-     * Use personal_sign to sign the hash with your MetaMask account.
+     * Use personal_sign in browser console to sign the hash with your MetaMask account.
      * Note: the params order is [hash, account] for personal_sign.
      *
      *   const signature = await ethereum.request({
@@ -133,7 +178,7 @@ contract VerifySignature {
     /*
      * ── STEP 4: Recover and verify the signer's address ─────────────────
      *
-     * To recover the signer's address off-chain before calling verify():
+     * To recover the signer's address off-chain from browser console before calling verify():
      *
      *   const signature = "0x1064e4bf90f87bbac70e8e23f034a409c348709159b74662a0d5c35512897e93
      *                       3bd18f15757c689882f12ee447fb8e59070bebeb60d009647ce29994cb2ec92c1c";
