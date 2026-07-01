@@ -77,7 +77,7 @@ contract Encoding {
      * @return The string "some string" as padded ABI-encoded bytes.
      */
     function encodeString() public pure returns (bytes memory) {
-        bytes memory someString = abi.encode("Shazam!");
+        bytes memory someString = abi.encode("some string");
         return someString;
     }
 
@@ -96,7 +96,70 @@ contract Encoding {
      * @return The string "some string" as compact packed bytes.
      */
     function encodeStringPacked() public pure returns (bytes memory) {
-        bytes memory someString = abi.encodePacked("Shazam!");
+        bytes memory someString = abi.encodePacked("some string");
         return someString;
+    }
+
+    /**
+    * @notice Converts a string literal directly to bytes using type casting.
+    * @dev `bytes("some string")` is a direct type cast; it produces the same
+    *      compact output as abi.encodePacked for a single string, but has
+    *      slightly different gas costs and is not suitable for multi-value packing.
+    *      Use abi.encodePacked when combining multiple values.
+    * @return The string "some string" as raw bytes via type casting.
+    */
+    function encodeStringBytes() public pure returns (bytes memory) {
+        bytes memory someString = bytes("some string");
+        return someString;
+    }
+
+    /**
+    * @notice Decodes ABI-encoded bytes back into a readable string.
+    * @dev abi.decode reverses abi.encode by reading the padded byte structure
+    *      and extracting the original value at the specified type.
+    *      The type must match exactly what was used during encoding.
+    *
+    *      Example:
+    *        abi.encode("some string")                → padded bytes
+    *        abi.decode(paddedBytes, (string))        → "some string"
+    *
+    * @return The decoded string "some string" extracted from its ABI-encoded form.
+    */
+    function decodeString() public pure returns (string memory) {
+        string memory someString = abi.decode(encodeString(), (string));
+        return someString;
+    }
+
+    /**
+    * @notice ABI-encodes two strings together into a single bytes object.
+    * @dev abi.encode supports multiple values in one call, each padded to 32 bytes.
+    *      The result is larger than encoding a single string because it contains
+    *      offsets, lengths, and padded content for each value.
+    *
+    *      Example:
+    *        abi.encode("some string", "it's bigger!") → ~192 bytes (padded)
+    *
+    * @return Both strings ABI-encoded together as a single padded bytes object.
+    */
+    function multiEncode() public pure returns (bytes memory) {
+        bytes memory someString = abi.encode("some string", "it's bigger!");
+        return someString;
+    }
+
+    /**
+    * @notice Decodes a multi-value ABI-encoded bytes object back into two strings.
+    * @dev abi.decode can extract multiple values at once when given a tuple of types.
+    *      The types provided must match the order and types used during encoding.
+    *
+    *      Example:
+    *        Input:  abi.encode("some string", "it's bigger!")
+    *        Output: ("some string", "it's bigger!")
+    *
+    * @return someString      The first decoded string: "some string".
+    * @return someOtherString The second decoded string: "it's bigger!".
+    */
+    function multiDecode() public pure returns (string memory, string memory) {
+        (string memory someString, string memory someOtherString) = abi.decode(multiEncode(), (string, string));
+        return (someString, someOtherString);
     }
 }
