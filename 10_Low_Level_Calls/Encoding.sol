@@ -162,4 +162,55 @@ contract Encoding {
         (string memory someString, string memory someOtherString) = abi.decode(multiEncode(), (string, string));
         return (someString, someOtherString);
     }
+
+    /**
+    * @notice Packs two strings together into a single compact bytes object.
+    * @dev abi.encodePacked concatenates multiple values tightly with no padding,
+    *      producing a much smaller output than abi.encode.
+    *      However, the values are merged without any length or offset markers,
+    *      making it impossible to reliably separate them during decoding.
+    *
+    *      Example:
+    *        abi.encodePacked("some string", "it's bigger!") → 24 bytes (compact)
+    *        abi.encode("some string", "it's bigger!")       → ~192 bytes (padded)
+    *
+    * @return Both strings packed together as a single compact bytes object.
+    */
+    function multiEncodePacked() public pure returns (bytes memory) {
+        bytes memory someString = abi.encodePacked("some string, but ", "it's bigger!");
+        return someString;
+    }
+
+    /**
+    * @notice Attempts to decode a packed bytes object back into a string — this will fail.
+    * @dev abi.decode expects ABI-encoded input with padding and length markers.
+    *      abi.encodePacked strips all of that, so abi.decode cannot locate where
+    *      one value ends and the next begins, causing this function to revert.
+    *      To convert packed bytes to a string, use a direct type cast instead.
+    *
+    * @return This function will always revert and never return a value.
+    */
+    // This doesn't work — abi.decode cannot parse packed bytes, it will revert.
+    function multiDecodePacked() public pure returns (string memory) {
+        string memory someString = abi.decode(multiEncodePacked(), (string));
+        return someString;
+    }
+
+    /**
+    * @notice Converts packed bytes into a readable string using a direct type cast.
+    * @dev Since packed bytes have no length markers, abi.decode cannot be used.
+    *      Instead, string(...) treats the entire bytes object as a single string,
+    *      which works correctly here since we only need one combined string output.
+    *
+    *      Example:
+    *        multiEncodePacked() → bytes of "some stringit's bigger!"
+    *        string(...)         → "some stringit's bigger!"
+    *
+    * @return The combined packed strings cast directly into a single string.
+    */
+    // Gas: 22313
+    function multiStringCastPacked() public pure returns (string memory) {
+        string memory someString = string(multiEncodePacked());
+        return someString;
+    }
 }
